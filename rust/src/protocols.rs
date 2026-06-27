@@ -8,7 +8,10 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-pub fn get_res_response(request: Request<Vec<u8>>) -> Response<Cow<'static, [u8]>> {
+pub fn get_res_response(
+    request: Request<Vec<u8>>,
+    res_route_table: &HashMap<String, String>,
+) -> Response<Cow<'static, [u8]>> {
     let root = PathBuf::from("res://");
     let uri = request.uri().clone();
     let path = format!(
@@ -16,9 +19,11 @@ pub fn get_res_response(request: Request<Vec<u8>>) -> Response<Cow<'static, [u8]
         uri.host().unwrap_or_default(),
         uri.path()
     );
-    let mut full_path = root.join(&path);
+    let unrouted_path = root.join(&path).to_string_lossy().into_owned();
+    let routed_path = resolve_res_route(&unrouted_path, res_route_table);
+    let mut full_path = PathBuf::from(&routed_path);
 
-    debug_print!("[WRY Protocol] Request: {} | scheme={} host={} path={}", uri, uri.scheme_str().unwrap_or("?"), uri.host().unwrap_or("?"), uri.path());
+    debug_print!("[WRY Protocol] Request: {} | scheme={} host={} path={} resolved={}", uri, uri.scheme_str().unwrap_or("?"), uri.host().unwrap_or("?"), uri.path(), routed_path);
     debug_print!("[WRY Protocol] Resolved full_path: {:?}", full_path);
 
     let mut full_path_str = GString::from(full_path.to_str().unwrap_or_default());
@@ -140,6 +145,25 @@ pub fn get_res_response(request: Request<Vec<u8>>) -> Response<Cow<'static, [u8]
                 ))
                 .expect("Failed to build 404 response")
         });
+}
+
+fn resolve_res_route(full_path: &str, res_route_table: &HashMap<String, String>) -> String {
+    let mut best_match: Option<(&str, &str)> = None;
+
+    for (virtual_path, real_path) in res_route_table {
+        if full_path.starts_with(virtual_path)
+            && best_match.as_ref().map_or(true, |(best, _)| virtual_path.len() > best.len())
+        {
+            best_match = Some((virtual_path, real_path));
+        }
+    }
+
+    if let Some((virtual_path, real_path)) = best_match {
+        let suffix = &full_path[virtual_path.len()..];
+        format!("{}{}", real_path, suffix)
+    } else {
+        full_path.to_string()
+    }
 }
 
 lazy_static! {

@@ -8,6 +8,7 @@ The fundamental `Control` node to present a webview.
 | -------------------- | ---------- | -------------------------------------------------------------------------------------------------------------- |
 | full_window_size     | bool       | Webview will always be the same size as the viewport.                                                          |
 | url                  | String     | Initial URL to be loaded. This will override `html`.                                                           |
+| res_route_table      | Dictionary | Maps virtual `res://` path prefixes to real `res://` path prefixes when serving local resources.               |
 | html                 | String     | HTML string to be loaded. This will be ignored if `url` is provided.                                           |
 | data_directory  | String     | The directory for persisting internal webview data. Supports `user://`, absolute, or relative file paths.        |
 | transparent          | bool       | Webview should be transparent.                                                                                 |
@@ -153,6 +154,8 @@ func load_html(html: String) -> void:
 ### load_url(...)
 
 Navigate to the specified URL.
+
+When loading `res://` URLs, `res_route_table` can remap virtual resource path prefixes before Godot WRY reads the file. For example, with `res_route_table` set to `{ "res://D": "res://A/B/C" }`, loading `res://D/E` will serve the file from `res://A/B/C/E` while the webview still navigates to `res://D/E`.
 
 <a class="button" href="https://docs.rs/wry/latest/wry/struct.WebView.html#method.load_url" target="_blank">WRY Documentation</a>
 

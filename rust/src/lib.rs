@@ -54,6 +54,8 @@ struct WebView {
     #[export]
     url: GString,
     #[export]
+    res_route_table: Dictionary,
+    #[export]
     html: GString,
     #[export]
     data_directory: GString,
@@ -94,6 +96,7 @@ impl IControl for WebView {
             previous_content_scale_factor: 1.0,
             full_window_size: true,
             url: "https://github.com/doceazedo/godot_wry".into(),
+            res_route_table: Dictionary::new(),
             html: "".into(),
             data_directory: "user://".into(),
             transparent: false,
@@ -257,6 +260,11 @@ impl WebView {
             None
         };
         let mut context = WebContext::new(resolved_data_directory);
+        let res_route_table: HashMap<String, String> = self.res_route_table
+            .iter_shared()
+            .typed::<GString, GString>()
+            .map(|(key, value)| (String::from(key), String::from(value)))
+            .collect();
         let webview_builder = WebViewBuilder::with_attributes(WebViewAttributes {
             context: Some(&mut context),
             url: if self.html.is_empty() { Some(String::from(&self.url)) } else { None },
@@ -439,7 +447,7 @@ impl WebView {
                 }
             })
             .with_custom_protocol(
-                "res".into(), move |_webview_id, request| get_res_response(request),
+                "res".into(), move |_webview_id, request| get_res_response(request, &res_route_table),
             );
 
         let webview_builder = if self.forward_input_events {
@@ -672,15 +680,7 @@ impl WebView {
         if let Some(stripped) = url_str.strip_prefix("res://") {
             let path = stripped.replace("\\", "/");
             
-            #[cfg(target_os = "linux")]
-            {
-                url_str = format!("res://{}", path);
-            }
-
-            #[cfg(not(target_os = "linux"))]
-            {
-                url_str = format!("http://res.{}", path);
-            }
+            url_str = format!("res://{}", path);
         }
 
         if let Some(webview) = &self.webview {

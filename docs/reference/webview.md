@@ -155,7 +155,9 @@ func load_html(html: String) -> void:
 
 Navigate to the specified URL.
 
-When loading `res://` URLs, `res_route_table` can remap virtual resource path prefixes before Godot WRY reads the file. For example, with `res_route_table` set to `{ "res://D": "res://A/B/C" }`, loading `res://D/E` will serve the file from `res://A/B/C/E` while the webview still navigates to `res://D/E`.
+When loading `res://` URLs, `res_route_table` can remap virtual resource path prefixes before Godot WRY reads the file. For example, with `res_route_table` set to `{ "res://D/": "res://A/B/C" }`, loading `res://D/E` will serve the file from `res://A/B/C/E` while the webview still navigates to `res://D/E`.
+
+`res_route_table` uses direct string prefix matching. If a key does not end with `/`, it can also match longer path names with the same prefix, such as `res://D` matching `res://Demo/index.html`. Use a trailing slash when you want to remap only a directory prefix, such as `{ "res://D/": "res://A/B/C/" }`.
 
 <a class="button" href="https://docs.rs/wry/latest/wry/struct.WebView.html#method.load_url" target="_blank">WRY Documentation</a>
 

@@ -260,11 +260,7 @@ impl WebView {
             None
         };
         let mut context = WebContext::new(resolved_data_directory);
-        let res_route_table: HashMap<String, String> = self.res_route_table
-            .iter_shared()
-            .typed::<GString, GString>()
-            .map(|(key, value)| (String::from(key), String::from(value)))
-            .collect();
+        let res_route_table = self.res_route_table.clone();
         let webview_builder = WebViewBuilder::with_attributes(WebViewAttributes {
             context: Some(&mut context),
             url: if self.html.is_empty() { Some(String::from(&self.url)) } else { None },

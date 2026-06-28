@@ -1,4 +1,4 @@
-use godot::builtin::GString;
+use godot::builtin::{Dictionary, GString};
 use godot::classes::file_access::ModeFlags;
 use godot::classes::FileAccess;
 use http::{Request, Response};
@@ -10,7 +10,7 @@ use std::path::PathBuf;
 
 pub fn get_res_response(
     request: Request<Vec<u8>>,
-    res_route_table: &HashMap<String, String>,
+    res_route_table: &Dictionary,
 ) -> Response<Cow<'static, [u8]>> {
     let root = PathBuf::from("res://");
     let uri = request.uri().clone();
@@ -147,11 +147,14 @@ pub fn get_res_response(
         });
 }
 
-fn resolve_res_route(full_path: &str, res_route_table: &HashMap<String, String>) -> String {
-    let mut best_match: Option<(&str, &str)> = None;
+fn resolve_res_route(full_path: &str, res_route_table: &Dictionary) -> String {
+    let mut best_match: Option<(String, String)> = None;
 
-    for (virtual_path, real_path) in res_route_table {
-        if full_path.starts_with(virtual_path)
+    for (virtual_path, real_path) in res_route_table.iter_shared().typed::<GString, GString>() {
+        let virtual_path = String::from(virtual_path);
+        let real_path = String::from(real_path);
+
+        if full_path.starts_with(&virtual_path)
             && best_match.as_ref().map_or(true, |(best, _)| virtual_path.len() > best.len())
         {
             best_match = Some((virtual_path, real_path));

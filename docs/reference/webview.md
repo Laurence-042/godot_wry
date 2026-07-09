@@ -433,3 +433,33 @@ signal page_load_finished(url: String)
 | Parameter | Type   | Description                                                            |
 | --------- | ------ | ---------------------------------------------------------------------- |
 | url       | String | The url of the page that was loaded.                                   |
+
+### res_response(...)
+
+Emitted when a `res://` resource request has been handled, before the browser processes the response. Fires once per resource (HTML, CSS, JS, images, etc.) — filter by `url` if you only care about the main page.
+
+::: info
+This signal is only emitted for `res://` URLs served through the custom protocol handler. External `http://` / `https://` URLs do not trigger this signal.
+:::
+
+#### Example
+
+```gdscript
+func _ready() -> void:
+    $WebView.res_response.connect(_on_res_response)
+
+func _on_res_response(url: String, status_code: int, headers: Dictionary) -> void:
+    print(url, status_code, headers.get("content-type", ""))
+```
+
+#### API
+
+```gdscript
+signal res_response(url: String, status_code: int, headers: Dictionary)
+```
+
+| Parameter   | Type       | Description                                                                     |
+| ----------- | ---------- | ------------------------------------------------------------------------------- |
+| url         | String     | The internal URL of the requested resource (e.g. `http://res.addons/index.html`). |
+| status_code | int        | HTTP status code of the response (e.g. `200`, `404`, `206`).                   |
+| headers     | Dictionary | All response headers as `String → String` pairs (e.g. `{ "content-type": "text/html" }`). |

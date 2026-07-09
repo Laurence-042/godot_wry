@@ -163,6 +163,9 @@ impl WebView {
     #[signal]
     fn page_load_finished(message: GString);
 
+    #[signal]
+    fn res_response(url: GString, status_code: i32, headers: Dictionary);
+
     #[func]
     fn update_webview(&mut self) {
         if self.webview.is_none() {
@@ -432,7 +435,7 @@ impl WebView {
                 }
             })
             .with_on_page_load_handler({
-                let base = Arc::clone(&base);
+                let base: Arc<Mutex<Gd<Control>>> = Arc::clone(&base);
                 move | event: PageLoadEvent, url: String | {
                     let mut base = base.lock().unwrap();
 
@@ -443,8 +446,30 @@ impl WebView {
                 }
             })
             .with_custom_protocol(
-                "res".into(), move |_webview_id, request| get_res_response(request, &res_route_table),
-            );
+                "res".into(), {
+                let base = Arc::clone(&base);
+                move |_webview_id, request| {
+                    let url = request.uri().to_string();
+                    let response = get_res_response(request, &res_route_table);
+                    let status_code = response.status().as_u16() as i32;
+                    let mut headers = Dictionary::new();
+                    for (name, value) in response.headers().iter() {
+                        let key = GString::from(name.as_str());
+                        let val = GString::from(value.to_str().unwrap_or(""));
+                        headers.set(key, val);
+                    }
+                    base.lock().unwrap().call_deferred(
+                        "emit_signal",
+                        &[
+                            "res_response".to_variant(),
+                            url.to_variant(),
+                            status_code.to_variant(),
+                            headers.to_variant(),
+                        ],
+                    );
+                    response
+                }
+            });
 
         let webview_builder = if self.forward_input_events {
             webview_builder.with_initialization_script(r#"

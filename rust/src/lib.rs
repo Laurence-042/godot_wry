@@ -14,6 +14,8 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::path::PathBuf;
 use wry::{WebViewBuilder, WebContext, Rect, WebViewAttributes, PageLoadEvent};
+#[cfg(target_os = "windows")]
+use wry::WebViewBuilderExtWindows;
 use wry::dpi::{PhysicalPosition, PhysicalSize};
 use wry::http::Request;
 
@@ -65,6 +67,9 @@ struct WebView {
     background_color: Color,
     #[export]
     devtools: bool,
+    #[cfg(target_os = "windows")]
+    #[export]
+    default_context_menus: bool,
     #[export]
     headers: Dictionary,
     #[export]
@@ -102,6 +107,8 @@ impl IControl for WebView {
             transparent: false,
             background_color: Color::from_rgb(1.0, 1.0, 1.0),
             devtools: true,
+            #[cfg(target_os = "windows")]
+            default_context_menus: true,
             headers: Dictionary::new(),
             user_agent: "".into(),
             zoom_hotkeys: false,
@@ -548,6 +555,8 @@ impl WebView {
         } else {
             webview_builder
         };
+        #[cfg(target_os = "windows")]
+        let webview_builder = webview_builder.with_default_context_menus(self.default_context_menus);
 
         if !self.url.is_empty() && !self.html.is_empty() {
             godot_error!("[Godot WRY] You have entered both a URL and HTML code. You may only enter one at a time.")

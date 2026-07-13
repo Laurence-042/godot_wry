@@ -15,6 +15,7 @@ The fundamental `Control` node to present a webview.
 | autoplay             | bool       | Media can be played without user interaction.                                                                  |
 | background_color     | Color      | **🚧 Not implemented.** Webview background color. This will be ignored if `transparent` is set to `true`.      |
 | devtools             | bool       | Enables web inspector. To open it, you can call `open_devtools()`, or right click the page and open it.        |
+| default_context_menus | bool       | Enables the webview's default context menu. **Windows only.**                                             |
 | headers              | Dictionary | **🚧 Not implemented.** Headers used when loading the requested URL.                                           |
 | user_agent           | String     | Custom user agent header.                                                                                      |
 | zoom_hotkeys         | bool       | Enables page zooming hotkeys.                                                                                  |

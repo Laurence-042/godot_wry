@@ -210,6 +210,8 @@ impl WebView {
     }
 
     fn build_webview(&mut self) {
+        debug_print!("[WRY Lib] Building webview with URL: {}, HTML: {}, Data Directory: {}, Transparent: {}, Background Color: {:?}, DevTools: {}, User Agent: {}, Zoom Hotkeys: {}, Clipboard: {}, Incognito: {}, Focused When Created: {}, Forward Input Events: {}, Autoplay: {}",
+            self.url, self.html, self.data_directory, self.transparent, self.background_color, self.devtools, self.user_agent, self.zoom_hotkeys, self.clipboard, self.incognito, self.focused_when_created, self.forward_input_events, self.autoplay);
         let display_server = DisplayServer::singleton();
         if display_server.get_name() == "headless".into()
         {
@@ -710,7 +712,15 @@ impl WebView {
         if let Some(stripped) = url_str.strip_prefix("res://") {
             let path = stripped.replace("\\", "/");
             
-            url_str = format!("res://{}", path);
+            #[cfg(target_os = "linux")]
+            {
+                url_str = format!("res://{}", path);
+            }
+
+            #[cfg(not(target_os = "linux"))]
+            {
+                url_str = format!("http://res.{}", path);
+            }
         }
 
         if let Some(webview) = &self.webview {

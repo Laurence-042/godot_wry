@@ -31,6 +31,11 @@ _build-linux:
 _build-windows:
 	cargo build --target {{target}} --locked --release
 
+# Dist variant: statically links the MSVC CRT (vcruntime) into the DLL so it
+# runs on machines that don't have the Visual C++ Redistributable installed.
+_build-windows-dist:
+	cargo build --target {{target}} --locked --release --config 'target.x86_64-pc-windows-msvc.rustflags=["-C", "target-feature=+crt-static"]'
+
 _copy-to-godot-macos:
 	mkdir -p ../godot/addons/godot_wry/bin/{{target}}
 	cp -R ./target/{{target}}/release/libgodot_wry.framework ../godot/addons/godot_wry/bin/{{target}}

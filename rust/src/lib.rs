@@ -6,6 +6,7 @@ mod protocols;
 use godot::global::MouseButtonMask;
 use godot::init::*;
 use godot::prelude::*;
+use godot::classes::control::FocusMode;
 use godot::classes::{Control, DisplayServer, IControl, InputEvent, InputEventMouseButton, InputEventMouseMotion, InputEventKey, ProjectSettings, Viewport};
 use godot::global::{Key, MouseButton};
 use lazy_static::lazy_static;
@@ -149,6 +150,10 @@ impl IControl for WebView {
                 let mouse_pos = self.base().get_global_mouse_position();
                 let rect = self.base().get_global_rect();
 
+                // Clicks outside the WebView (these reach Godot): return the wry
+                // native focus to the parent window. Clicks inside the WebView are
+                // captured by the native child window and never reach Godot, so
+                // they are handled via the JS/IPC forwarding path instead.
                 if !rect.contains_point(mouse_pos) {
                     if let Some(webview) = &self.webview {
                         let _ = webview.focus_parent();
@@ -324,9 +329,22 @@ impl WebView {
                                     }
                                     return;
                                 },
-
+                                
                                 "_mouse_down" | "_mouse_up" => {
                                     let button = json_value.get("button").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+
+                                    // Explicitly claim Godot GUI focus when clicking inside the
+                                    // WebView. This is required because the native WebView is an OS
+                                    // child-window overlay that captures clicks, so Godot's
+                                    // _input/_gui_input never fire and cannot auto-transfer focus.
+                                    // Grabbing focus here releases the previously focused Control
+                                    // (e.g. a Button), which prevents keyboard events from being
+                                    // double-dispatched to it. No-op when focus_mode == NONE
+                                    // (overlay-UI usage).
+                                    let pressed = event_type == "_mouse_down";
+                                    if pressed && base.get_focus_mode() != FocusMode::NONE {
+                                        base.call_deferred("grab_focus", &[]);
+                                    }
                                     
                                     let godot_button = match button {
                                         0 => MouseButton::LEFT,
@@ -336,8 +354,7 @@ impl WebView {
                                         4 => MouseButton::WHEEL_DOWN,
                                         _ => MouseButton::LEFT, // default to left button
                                     };
-                                    
-                                    let pressed = event_type == "_mouse_down";
+
                                     let mask = match godot_button {
                                         MouseButton::LEFT => MouseButtonMask::LEFT,
                                         MouseButton::RIGHT => MouseButtonMask::RIGHT,
@@ -417,6 +434,18 @@ impl WebView {
                                 },
 
                                 "_key_down" | "_key_up" => {
+                                    // Fix double-activation: when focus_mode != NONE and the
+                                    // WebView holds Godot GUI focus, keyboard events are already
+                                    // consumed by the web page, so don't forward them back to
+                                    // Godot. Otherwise Godot would dispatch them to the
+                                    // gui_get_focus_owner (the previously focused Control, e.g. a
+                                    // Button), re-activating it. When focus_mode == NONE
+                                    // (overlay-UI usage), always forward, preserving prior behavior.
+                                    let focus_mode = base.get_focus_mode();
+                                    if focus_mode != FocusMode::NONE && base.has_focus() {
+                                        return;
+                                    }
+
                                     let key_str = json_value.get("key").and_then(|v| v.as_str()).unwrap_or("");
                                     let mut event = InputEventKey::new_gd();
                                     
@@ -434,7 +463,7 @@ impl WebView {
                                     }
                                     return;
                                 },
-
+                                
                                 _ => {}
                             }
                         }

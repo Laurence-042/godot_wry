@@ -22,7 +22,7 @@ The fundamental `Control` node to present a webview.
 | clipboard            | bool       | Enables clipboard access on **Linux** and **Windows**. Always enabled on macOS.                                |
 | incognito            | bool       | Run the webview with incognito mode.                                                                           |
 | focused_when_created | bool       | Webview will be focused when created.                                                                          |
-| forward_input_events | bool       | Mouse and keyboard events captured by the webview will be propagated to the game.                              |
+| forward_input_events | bool       | Mouse and keyboard events captured by the webview will be propagated to the game. While the WebView holds Godot GUI focus, keyboard events are not forwarded (they were already handled by the page). See [Focus and the native webview overlay](../about/caveats#focus-and-the-native-webview-overlay).                              |
 
 ## Methods
 

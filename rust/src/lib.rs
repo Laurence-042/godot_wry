@@ -319,11 +319,12 @@ impl WebView {
                                     event.set_relative(Vector2::new(movement_x, movement_y));
                                     
                                     if let Some(mut viewport) = base.get_viewport() {
-                                        viewport.push_input(&event);
+                                        // deferred to avoid reentrant bind_mut when this fires during another WebView call
+                                        viewport.call_deferred("push_input", &[event.to_variant()]);
                                     }
                                     return;
                                 },
-                                
+
                                 "_mouse_down" | "_mouse_up" => {
                                     let button = json_value.get("button").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
                                     
@@ -380,7 +381,7 @@ impl WebView {
                                     event.set_button_mask(*button_mask);
                                     
                                     if let Some(mut viewport) = base.get_viewport() {
-                                        viewport.push_input(&event);
+                                        viewport.call_deferred("push_input", &[event.to_variant()]);
                                     }
                                     return;
                                 },
@@ -429,11 +430,11 @@ impl WebView {
                                     event.set_meta_pressed(json_value.get("meta").and_then(|v| v.as_bool()).unwrap_or(false));
                                     
                                     if let Some(mut viewport) = base.get_viewport() {
-                                        viewport.push_input(&event);
+                                        viewport.call_deferred("push_input", &[event.to_variant()]);
                                     }
                                     return;
                                 },
-                                
+
                                 _ => {}
                             }
                         }
@@ -815,7 +816,8 @@ fn send_wheel_event(
         event.set_alt_pressed(alt);
         event.set_meta_pressed(meta);
         if let Some(vp) = viewport {
-            vp.clone().push_input(&event);
+            // deferred to avoid reentrant bind_mut when this fires during another WebView call
+            vp.clone().call_deferred("push_input", &[event.to_variant()]);
         }
     }
 }

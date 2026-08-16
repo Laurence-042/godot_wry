@@ -21,7 +21,7 @@ use wry::dpi::{PhysicalPosition, PhysicalSize};
 use wry::http::Request;
 
 use crate::godot_window::GodotWindow;
-use crate::protocols::get_res_response;
+use crate::protocols::{get_res_response, normalize_url};
 
 #[cfg(target_os = "windows")]
 use {
@@ -101,7 +101,7 @@ impl IControl for WebView {
             previous_window_position: Vector2i::default(),
             previous_content_scale_factor: 1.0,
             full_window_size: true,
-            url: "https://github.com/doceazedo/godot_wry".into(),
+            url: "".into(),
             res_route_table: Dictionary::new(),
             html: "".into(),
             data_directory: "user://".into(),
@@ -278,10 +278,25 @@ impl WebView {
         };
         let mut context = WebContext::new(resolved_data_directory);
         let res_route_table = self.res_route_table.clone();
+        // Build-time initial load: stay on the initial blank document when
+        // neither URL nor HTML is set, so controller creation never starts a
+        // navigation that an immediate `load_url` call would supersede (a
+        // superseded navigation surfaces as `page_load_finished("about:blank")`
+        // because wry reports the webview's current URI on completion).
+        let initial_url: Option<String> = if !self.url.is_empty() && self.html.is_empty() {
+            Some(normalize_url(&String::from(&self.url)))
+        } else {
+            None
+        };
+        let initial_html: Option<String> = if self.url.is_empty() && !self.html.is_empty() {
+            Some(String::from(&self.html))
+        } else {
+            None
+        };
         let webview_builder = WebViewBuilder::with_attributes(WebViewAttributes {
             context: Some(&mut context),
-            url: if self.html.is_empty() { Some(String::from(&self.url)) } else { None },
-            html: if self.url.is_empty() { Some(String::from(&self.html)) } else { None },
+            url: initial_url,
+            html: initial_html,
             transparent: self.transparent,
             devtools: self.devtools,
             // headers: Some(HeaderMap::try_from(self.headers.iter_shared().typed::<GString, Variant>()).unwrap_or_default()),
@@ -741,21 +756,7 @@ impl WebView {
 
     #[func]
     fn load_url(&self, url: GString) {
-        let mut url_str = String::from(url);
-
-        if let Some(stripped) = url_str.strip_prefix("res://") {
-            let path = stripped.replace("\\", "/");
-            
-            #[cfg(target_os = "linux")]
-            {
-                url_str = format!("res://{}", path);
-            }
-
-            #[cfg(not(target_os = "linux"))]
-            {
-                url_str = format!("http://res.{}", path);
-            }
-        }
+        let url_str = normalize_url(&String::from(url));
 
         if let Some(webview) = &self.webview {
             let _ = webview.load_url(&url_str);

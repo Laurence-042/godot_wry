@@ -147,6 +147,24 @@ pub fn get_res_response(
         });
 }
 
+pub fn normalize_url(url: &str) -> String {
+    if let Some(stripped) = url.strip_prefix("res://") {
+        let path = stripped.replace("\\", "/");
+
+        #[cfg(target_os = "linux")]
+        {
+            format!("res://{}", path)
+        }
+
+        #[cfg(not(target_os = "linux"))]
+        {
+            format!("http://res.{}", path)
+        }
+    } else {
+        url.to_string()
+    }
+}
+
 fn resolve_res_route(full_path: &str, res_route_table: &Dictionary) -> String {
     let mut best_match: Option<(String, String)> = None;
 

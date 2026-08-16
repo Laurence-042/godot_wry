@@ -612,6 +612,10 @@ impl WebView {
 
         self.base().clone().connect("resized", &Callable::from_object_method(&*self.base(), "resize"));
         self.base().clone().connect("visibility_changed", &Callable::from_object_method(&*self.base(), "update_visibility"));
+
+        // The webview is always built visible; apply the control's actual
+        // visibility so spawning under a hidden parent starts hidden.
+        self.update_visibility();
     }
 
     fn reparent_webview(&mut self, new_window_id: i32) {

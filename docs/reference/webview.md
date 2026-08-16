@@ -163,6 +163,8 @@ When loading `res://` URLs, `res_route_table` can remap virtual resource path pr
 
 `res_route_table` uses direct string prefix matching. If a key does not end with `/`, it can also match longer path names with the same prefix, such as `res://D` matching `res://Demo/index.html`. Use a trailing slash when you want to remap only a directory prefix, such as `{ "res://D/": "res://A/B/C/" }`.
 
+When a request resolves to a directory, the `index.html` fallback is also resolved through `res_route_table` on the virtual path: an explicit route like `{ "res://A/B/index.html": "res://E/F/index.html" }` takes precedence over the directory-prefix route `{ "res://A/B": "res://C/D" }`.
+
 <a class="button" href="https://docs.rs/wry/latest/wry/struct.WebView.html#method.load_url" target="_blank">WRY Documentation</a>
 
 #### API

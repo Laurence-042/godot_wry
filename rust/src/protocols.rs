@@ -29,15 +29,23 @@ pub fn get_res_response(
     let mut full_path_str = GString::from(full_path.to_str().unwrap_or_default());
     if !FileAccess::file_exists(&full_path_str) {
         debug_print!("[WRY Protocol] File not found: {:?}, trying index.html fallback", full_path);
-        let index_path = full_path.join("index.html");
+        // Resolve index.html against the virtual path, so an explicit
+        // virtual/index.html route in the table outranks the directory-prefix
+        // route that already replaced routed_path.
+        let virtual_index_path = if unrouted_path.ends_with('/') {
+            format!("{}index.html", unrouted_path)
+        } else {
+            format!("{}/index.html", unrouted_path)
+        };
+        let index_path = PathBuf::from(resolve_res_route(&virtual_index_path, res_route_table));
         let index_path_str = GString::from(index_path.to_str().unwrap_or_default());
         if FileAccess::file_exists(&index_path_str) {
             if !uri.path().ends_with('/') {
-                let redirect_url = format!(
-                    "http://res.{}{}/",
+                let redirect_url = normalize_url(&format!(
+                    "res://{}{}/",
                     uri.host().unwrap_or_default(),
                     uri.path()
-                );
+                ));
                 debug_print!("[WRY Protocol] No trailing slash, JS redirect -> {}", redirect_url);
                 let redirect_html = format!(
                     "<!DOCTYPE html><html><head><script>location.replace(\"{}\")</script></head></html>",

@@ -178,6 +178,9 @@ impl WebView {
     #[signal]
     fn res_response(url: GString, status_code: i32, headers: Dictionary);
 
+    #[signal]
+    fn navigation_failed(url: GString, error: GString);
+
     #[func]
     fn update_webview(&mut self) {
         if self.webview.is_none() {
@@ -750,7 +753,9 @@ impl WebView {
     #[func]
     fn load_html(&self, html: GString) {
         if let Some(webview) = &self.webview {
-            let _ = webview.load_html(&*String::from(html));
+            if let Err(err) = webview.load_html(&*String::from(html)) {
+                self.report_navigation_failure("about:blank".to_string(), err.to_string());
+            }
         }
     }
 
@@ -759,8 +764,27 @@ impl WebView {
         let url_str = normalize_url(&String::from(url));
 
         if let Some(webview) = &self.webview {
-            let _ = webview.load_url(&url_str);
+            if let Err(err) = webview.load_url(&url_str) {
+                self.report_navigation_failure(url_str.clone(), err.to_string());
+            }
         }
+    }
+
+    /// A navigation request rejected synchronously by the engine (for example an
+    /// invalid URI) produces no page-load events at all, so hosts waiting for
+    /// `page_load_finished` would wait forever. Report the rejection as a
+    /// `navigation_failed` signal, deferred like every other signal emission.
+    fn report_navigation_failure(&self, url: String, error: String) {
+        godot_error!("[Godot WRY] Navigation rejected: {url} ({error})");
+        let mut base = self.base().clone();
+        base.call_deferred(
+            "emit_signal",
+            &[
+                "navigation_failed".to_variant(),
+                url.to_variant(),
+                error.to_variant(),
+            ],
+        );
     }
 
     #[func]

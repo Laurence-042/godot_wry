@@ -466,3 +466,28 @@ signal res_response(url: String, status_code: int, headers: Dictionary)
 | url         | String     | The internal URL of the requested resource (e.g. `http://res.addons/index.html`). |
 | status_code | int        | HTTP status code of the response (e.g. `200`, `404`, `206`).                   |
 | headers     | Dictionary | All response headers as `String → String` pairs (e.g. `{ "content-type": "text/html" }`). |
+
+### navigation_failed(...)
+
+Emitted when the engine synchronously rejects a navigation request from `load_url()` or `load_html()` (for example an invalid URI). Such a rejection produces no `page_load_started` / `page_load_finished` events at all, so hosts serializing loads must release their gate on this signal instead of waiting forever.
+
+#### Example
+
+```gdscript
+func _ready() -> void:
+    $WebView.navigation_failed.connect(_on_navigation_failed)
+
+func _on_navigation_failed(url: String, error: String) -> void:
+    printerr("navigation rejected: ", url, " (", error, ")")
+```
+
+#### API
+
+```gdscript
+signal navigation_failed(url: String, error: String)
+```
+
+| Parameter | Type   | Description                                                                                     |
+| --------- | ------ | ----------------------------------------------------------------------------------------------- |
+| url       | String | The URL passed to `load_url()`, or `about:blank` when `load_html()` was rejected.               |
+| error     | String | The engine error describing why the navigation request was rejected.                            |
